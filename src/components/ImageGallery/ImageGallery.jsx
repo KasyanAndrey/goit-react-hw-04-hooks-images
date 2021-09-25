@@ -1,5 +1,5 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import { useState, useEffect } from 'react';
+// import PropTypes from 'prop-types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ToastContainer, toast } from 'react-toastify';
@@ -13,99 +13,89 @@ import LoaderSpiner from '../Loader';
 import ImageGalleryItem from '../ImageGalleryItem';
 import LoadMoreButton from '../Button';
 
-class ImageGallery extends Component {
-  state = {
-    searchQuery: '',
-    images: [],
-    currentPage: 1,
-    isLoading: false,
-    error: null,
-  };
+function ImageGallery() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { searchQuery } = this.state;
-
-    if (prevState.searchQuery !== searchQuery) {
-      this.fetchImages();
+  useEffect(() => {
+    if (searchQuery) {
+      fetchImages();
     }
+  }, [searchQuery]);
 
+  useEffect(() => {
     window.scrollTo({
       top: document.documentElement.scrollHeight,
       behavior: 'smooth',
     });
-  }
+  });
 
-  handleFormSubmit = query => {
-    this.setState({
-      searchQuery: query,
-      currentPage: 1,
-      images: [],
-      error: null,
-    });
+  const handleFormSubmit = query => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    setImages([]);
+    setError(null);
   };
 
-  fetchImages = () => {
-    const { currentPage, searchQuery } = this.state;
+  const fetchImages = () => {
     const options = { searchQuery, currentPage };
 
-    this.setState({ isLoading: true });
+    setIsLoading(true);
 
     imagesApi
       .fetchImages(options)
       .then(images => {
         if (images.length === 0) {
-          this.setState({ error: true });
+          setError(true);
           toast.error('Please enter a more correct request!');
 
           return;
         }
 
-        this.setState(prevState => ({
-          images: [...prevState.images, ...images],
-          currentPage: prevState.currentPage + 1,
-        }));
+        setImages(state => [...state, ...images]);
+        setCurrentPage( state => state + 1);
       })
-      .catch(error => this.setState({ error }))
-      .finally(() => this.setState({ isLoading: false }));
+      .catch(error => setError(error))
+      .finally(() => setIsLoading(false));
   };
 
-  render() {
-    const { images, isLoading } = this.state;
-    const shouldRenderLoadMoreButton = images.length > 0 && !isLoading;
+  const shouldRenderLoadMoreButton = images.length > 0 && !isLoading;
 
-    return (
-      <div className={s.Container}>
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        {images && (
-          <ul className={s.ImageGallery}>
-            {images.map(({ webformatURL, largeImageURL, tags }) => (
-              <ImageGalleryItem
-                key={uuidv4()}
-                webformatURL={webformatURL}
-                largeImageURL={largeImageURL}
-                tags={tags}
-              />
-            ))}
-          </ul>
-        )}
-        {isLoading && <LoaderSpiner />}
-        {shouldRenderLoadMoreButton && (
-          <LoadMoreButton onClick={this.fetchImages}></LoadMoreButton>
-        )}
-        <ToastContainer autoClose={3000} />
-      </div>
-    );
-  }
+  return (
+    <div className={s.Container}>
+      <Searchbar onSubmit={handleFormSubmit} />
+      {images && (
+        <ul className={s.ImageGallery}>
+          {images.map(({ webformatURL, largeImageURL, tags }) => (
+            <ImageGalleryItem
+              key={uuidv4()}
+              webformatURL={webformatURL}
+              largeImageURL={largeImageURL}
+              tags={tags}
+            />
+          ))}
+        </ul>
+      )}
+      {isLoading && <LoaderSpiner />}
+      {shouldRenderLoadMoreButton && (
+        <LoadMoreButton onClick={fetchImages}></LoadMoreButton>
+      )}
+      <ToastContainer autoClose={3000} />
+    </div>
+  );
 }
 
-ImageGallery.propTypes = {
-  images: PropTypes.arrayOf(
-    PropTypes.shape({
-      webformatURL: PropTypes.string.isRequired,
-      largeImageURL: PropTypes.string.isRequired,
-      tags: PropTypes.string.isRequired,
-    }),
-  ),
-};
+// ImageGallery.propTypes = {
+//   images: PropTypes.arrayOf(
+//     PropTypes.shape({
+//       webformatURL: PropTypes.string.isRequired,
+//       largeImageURL: PropTypes.string.isRequired,
+//       tags: PropTypes.string.isRequired,
+//     }),
+//   ),
+// };
 
 export default ImageGallery;
