@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-// import PropTypes from 'prop-types';
+import PropTypes from 'prop-types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ToastContainer, toast } from 'react-toastify';
@@ -21,45 +21,47 @@ function ImageGallery() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (searchQuery) {
-      fetchImages();
+    if (!searchQuery) {
+      return;
     }
-  }, [searchQuery]);
 
-  useEffect(() => {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: 'smooth',
-    });
-  });
+    const fetchImages = () => {
+      setIsLoading(true);
+
+      imagesApi({ searchQuery, currentPage })
+        .then(images => {
+          if (images.length === 0) {
+            setError(true);
+            toast.error('Please enter a more correct request!');
+
+            return;
+          }
+
+          setImages(state => [...state, ...images]);
+        })
+        .catch(error => setError(error))
+        .finally(() => {
+          setIsLoading(false);
+
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth',
+          });
+        });
+    };
+
+    fetchImages();
+  }, [searchQuery, currentPage]);
 
   const handleFormSubmit = query => {
     setSearchQuery(query);
     setCurrentPage(1);
     setImages([]);
-    setError(null);
+    setError(error);
   };
 
-  const fetchImages = () => {
-    const options = { searchQuery, currentPage };
-
-    setIsLoading(true);
-
-    imagesApi
-      .fetchImages(options)
-      .then(images => {
-        if (images.length === 0) {
-          setError(true);
-          toast.error('Please enter a more correct request!');
-
-          return;
-        }
-
-        setImages(state => [...state, ...images]);
-        setCurrentPage( state => state + 1);
-      })
-      .catch(error => setError(error))
-      .finally(() => setIsLoading(false));
+  const handleButtonLoadMore = () => {
+    setCurrentPage(state => state + 1);
   };
 
   const shouldRenderLoadMoreButton = images.length > 0 && !isLoading;
@@ -81,21 +83,21 @@ function ImageGallery() {
       )}
       {isLoading && <LoaderSpiner />}
       {shouldRenderLoadMoreButton && (
-        <LoadMoreButton onClick={fetchImages}></LoadMoreButton>
+        <LoadMoreButton onClick={handleButtonLoadMore}></LoadMoreButton>
       )}
       <ToastContainer autoClose={3000} />
     </div>
   );
 }
 
-// ImageGallery.propTypes = {
-//   images: PropTypes.arrayOf(
-//     PropTypes.shape({
-//       webformatURL: PropTypes.string.isRequired,
-//       largeImageURL: PropTypes.string.isRequired,
-//       tags: PropTypes.string.isRequired,
-//     }),
-//   ),
-// };
+ImageGallery.propTypes = {
+  images: PropTypes.arrayOf(
+    PropTypes.shape({
+      webformatURL: PropTypes.string.isRequired,
+      largeImageURL: PropTypes.string.isRequired,
+      tags: PropTypes.string.isRequired,
+    }),
+  ),
+};
 
 export default ImageGallery;
